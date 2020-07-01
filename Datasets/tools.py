@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from urllib.error import HTTPError
 import requests
 
+from torch.utils.data import Subset
+
 
 residues = ['ALA', 'ARG', 'ASN', 'ASP', 'ASX', 'CYS', 'GLN',
             'GLU', 'GLX', 'GLY', 'HIS', 'ILE', 'LEU', 'LYS',
@@ -18,13 +20,17 @@ residues = ['ALA', 'ARG', 'ASN', 'ASP', 'ASX', 'CYS', 'GLN',
 
 
 def fetch_pdb(config):
-    def fetch(pdb_row, path=config['pdb']):
+    def fetch(pdb_row, path):
+
+        if path[-1] != '/' : path += '/'
 
         pdb_id = pdb_row['PDB_ID']
+        # print(path)
         # print('fetch', pdb_id)
         file = pdb_id.lower() + '.pdb'
         file_path = path + file
         rcsb = 'https://files.rcsb.org/download/'
+        # print(rcsb + file)
         # print(file_path, os.path.exists(file_path))
         if not os.path.exists(file_path):
             try:
@@ -41,10 +47,8 @@ def fetch_pdb(config):
                 print('Error:', sys.exc_info()[0])
 
     with open(config['input_csv'], newline='') as csvfile:
-        # print('With open')
         with ThreadPoolExecutor() as executor:
-            # print('With exec')
-            executor.map(fetch, csv.DictReader(csvfile))
+            executor.map(lambda param: fetch(param, config['pdb']), csv.DictReader(csvfile))
 
 def parse_pdb(path, chain, all_chains=False, first=False):
     '''
@@ -239,30 +243,39 @@ def parse_pdb(path, chain, all_chains=False, first=False):
 
     return data
 
-def tensorize(pdb_row, path=''):
+def tensorize_pdb(conf):
+    print('### Start tensorize_pdb ###')
+    with open(conf['input_csv'], newline='') as csvfile:
+        ### Multiprocess
+        # with ProcessPoolExecutor() as executor:
+        #     executor.map(lambda param: tensorize(param, conf['pdb'], conf['tensors']), csv.DictReader(csvfile))
+
+        ## Single process
+        for row in csv.DictReader(csvfile):
+            tensorize(row, conf['pdb'], conf['tensors'])
+
+    print('### End tensorize_pdb ###')
+
+def tensorize(pdb_row, path, tensor):
     pdb_id = pdb_row['PDB_ID'].lower()
     chain_id = pdb_row['CHAIN_ID']
     npy_file = pdb_id.upper() + '_' + chain_id.upper() + '.npy'
+    all_chains =  False
 
-    # print('Generating: ', npy_file)
-    all_chains = True if chain_id == '0' else False
+    if path[-1] != '/': path += '/'
+    if tensor[-1] != '/': tensor += '/'
 
     if not os.path.exists(path + pdb_id + '.pdb'):
         print("PDB not found: " + pdb_id + '.pdb')
 
-    # print('Tensorizing: ', path + pdb_id + '.pdb')
-    protein_data = parse_pdb(path + pdb_id + '.pdb', chain_id, all_chains, False)
+    if not os.path.exists(tensor + npy_file):
+        protein_data = parse_pdb(path + pdb_id + '.pdb', chain_id, all_chains, False)
+        print(npy_file, len(protein_data))
 
-    print(pdb_id + '.pdb', len(protein_data))
-    np.save(f"{npy_file}", protein_data)
+        np.save(f"{tensor}{npy_file}", protein_data)
+    else:
+        print(npy_file, 'EXISTS')
 
-def tensorize_pdb(config):
-
-    with open(config['input_csv'], newline='') as csvfile:
-        # for row in csv.DictReader(csvfile):
-        #     tensorize(row)
-        with ProcessPoolExecutor() as executor:
-            executor.map(tensorize, csv.DictReader(csvfile))
 
 def get_subsets(dataset, split=(0.7,0.1,0.2), augment=1):
     classes = [dataset.input_df.index[dataset.input_df['CLASS_ID'] == i].tolist() for i in range(dataset.nb_classes)]

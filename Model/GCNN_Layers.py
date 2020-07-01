@@ -273,7 +273,7 @@ class Attention(nn.Module):
 
     def forward(self, v):
 
-        temp = torch.sqrt(torch.as_tensor(self.nb_features, dtype=torch.float32)
+        temp = torch.sqrt(torch.as_tensor(self.nb_features, dtype=torch.float32))
         # print(v.size(), self.u.size())
         x = torch.matmul(v, self.u)
         x = x.permute(0,2,1)

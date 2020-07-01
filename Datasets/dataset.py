@@ -86,9 +86,9 @@ class DatasetProtein(Dataset):
         v = v.astype('float32')
         c = c.astype('float32')
         m = m.astype('float32')
-        target = target.astype('float32')
+        # target = target.astype('float32')
         # print(v.dtype, c.dtype, m.dtype)
-        if target.item() in [1,2,3] and self.nb_classes==2:
+        if target in [1,2,3] and self.nb_classes==2:
             target = 1
 
         return v, c, m, target
