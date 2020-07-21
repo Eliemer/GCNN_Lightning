@@ -20,7 +20,7 @@ residues = ['ALA', 'ARG', 'ASN', 'ASP', 'ASX', 'CYS', 'GLN',
 
 
 def fetch_pdb(config):
-    def fetch(pdb_row, path):
+    def fetch(pdb_row, path, replace=False):
 
         if path[-1] != '/' : path += '/'
 
@@ -41,14 +41,18 @@ def fetch_pdb(config):
                     with open(file_path, 'wb') as f:
                         for chunk in r:
                             f.write(chunk)
+                    print(file, file_path)
             except HTTPError:
                 print("PDBNotFoundError:", pdb_id)
             except:
                 print('Error:', sys.exc_info()[0])
 
+    print("\n\n### Start fetch_pdb ###")
     with open(config['input_csv'], newline='') as csvfile:
         with ThreadPoolExecutor() as executor:
             executor.map(lambda param: fetch(param, config['pdb']), csv.DictReader(csvfile))
+
+    print("### End fetch_pdb ###\n\n")
 
 def parse_pdb(path, chain, all_chains=False, first=False):
     '''
@@ -244,7 +248,7 @@ def parse_pdb(path, chain, all_chains=False, first=False):
     return data
 
 def tensorize_pdb(conf):
-    print('### Start tensorize_pdb ###')
+    print('\n\n### Start tensorize_pdb ###')
     with open(conf['input_csv'], newline='') as csvfile:
         ### Multiprocess
         # with ProcessPoolExecutor() as executor:
@@ -254,7 +258,7 @@ def tensorize_pdb(conf):
         for row in csv.DictReader(csvfile):
             tensorize(row, conf['pdb'], conf['tensors'])
 
-    print('### End tensorize_pdb ###')
+    print('### End tensorize_pdb ###\n\n')
 
 def tensorize(pdb_row, path, tensor):
     pdb_id = pdb_row['PDB_ID'].lower()
@@ -272,7 +276,9 @@ def tensorize(pdb_row, path, tensor):
         protein_data = parse_pdb(path + pdb_id + '.pdb', chain_id, all_chains, False)
         print(npy_file, len(protein_data))
 
-        np.save(f"{tensor}{npy_file}", protein_data)
+        if len(protein_data) > 0:
+            np.save(f"{tensor}{npy_file}", protein_data)
+
     else:
         print(npy_file, 'EXISTS')
 
