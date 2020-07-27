@@ -11,11 +11,13 @@ pp = pprint.PrettyPrinter(indent=2)
 
 try:
 	from Model.GCNN_Layers import *
+	from Model.interpret_v2 import *
 	from Datasets.tools import get_subsets, fetch_pdb, tensorize_pdb
 	from Datasets.dataset import DatasetProtein
 
 except ModuleNotFoundError:
 	from pytorch_lightning_src.Model.GCNN_Layers import *
+	from pytorch_lightning_src.Model.interpret_v2 import *
 	from pytorch_lightning_src.Datasets.tools import get_subsets, fetch_pdb, tensorize_pdb
 	from pytorch_lightning_src.Datasets.dataset import DatasetProtein
 
@@ -185,6 +187,7 @@ class GCNN(pl.LightningModule):
 
 		return data_ld
 
+
 	def forward(self, v, c, mask=None):
 
 		adj = self.adj(c) # Batch, 2(l2 dist, cos dist), nodes, nodes
@@ -235,9 +238,9 @@ class GCNN(pl.LightningModule):
 
 
 		logs = {'train_loss'  : loss,
-				'train_acc'   : accuracy(logits, target),
-				'train_recall': recall(logits, target),
-				'train_prec'  : precision(logits, target)}
+				'train_acc'   : accuracy(logits, target, num_classes=self.config['nb_classes']),
+				'train_recall': recall(logits, target, num_classes=self.config['nb_classes']),
+				'train_prec'  : precision(logits, target, num_classes=self.config['nb_classes'])}
 
 		# pp.pprint(logs)
 		return {'loss': loss, 'log': logs}
@@ -258,9 +261,9 @@ class GCNN(pl.LightningModule):
 		loss = self.model_loss(logits, target)
 
 		logs = {'val_loss'  : loss,
-				'val_acc'   : accuracy(logits, target),
-				'val_recall': recall(logits, target),
-				'val_prec'  : precision(logits, target)}
+				'val_acc'   : accuracy(logits, target, num_classes=self.config['nb_classes']),
+				'val_recall': recall(logits, target, num_classes=self.config['nb_classes']),
+				'val_prec'  : precision(logits, target, num_classes=self.config['nb_classes'])}
 
 		# pp.pprint(logs)
 		return {"loss": loss, 'log' : logs}
@@ -281,9 +284,9 @@ class GCNN(pl.LightningModule):
 		loss = self.model_loss(logits, target)
 
 		logs = {'test_loss'  : loss,
-				'test_acc'   : accuracy(logits, target),
-				'test_recall': recall(logits, target),
-				'test_prec'  : precision(logits, target)}
+				'test_acc'   : accuracy(logits, target, num_classes=self.config['nb_classes']),
+				'test_recall': recall(logits, target, num_classes=self.config['nb_classes']),
+				'test_prec'  : precision(logits, target, num_classes=self.config['nb_classes'])}
 
 		# pp.pprint(logs)
 		return {'loss': loss, 'log' : logs}
